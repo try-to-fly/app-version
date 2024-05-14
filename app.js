@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import meow from "meow";
 import inquirer from "inquirer";
 import Conf from "conf";
+import { notice } from "./notice.js";
 
 const config = new Conf({
   projectName: "app-version",
@@ -76,6 +77,7 @@ const cli = meow(
       add             添加仓库
       remove          删除仓库
       force           强制更新缓存
+      check           和缓存中的版本比对，检查出新版本列表
       <default>       显示最新版本和发布时间
 
     Options
@@ -150,6 +152,29 @@ const cli = meow(
       }
       break;
 
+    case "check":
+      // 比较缓存中的版本和最新版本，然后log出新版本
+      const reposToCheck = config.get("repos");
+      const newVersions = [];
+      for (const repo of reposToCheck) {
+        const releaseInfo = await getLatestRelease(repo);
+        if (
+          cache.has(repo) &&
+          cache.get(repo).data.version !== releaseInfo.version
+        ) {
+          newVersions.push(releaseInfo);
+        }
+      }
+      if (newVersions.length === 0) {
+        console.log("没有新版本");
+      } else {
+        console.log("新版本:");
+        newVersions.forEach((version) => {
+          const text = `新版本发布:${version.repo}: ${version.version} `;
+          notice(text);
+        });
+      }
+      break;
     case "force":
       await displayRepos(true);
       break;
