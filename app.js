@@ -6,6 +6,7 @@ import dayjs from "dayjs";
 import meow from "meow";
 import inquirer from "inquirer";
 import Conf from "conf";
+import ms from "ms";
 import { notice } from "./notice.js";
 
 const config = new Conf({
@@ -23,8 +24,16 @@ const table = new Table({
 
 // 定义一个异步函数来获取最新版本和发布时间
 async function getLatestRelease(repo, force = false) {
-  const today = dayjs().format("YYYY-MM-DD");
-  if (!force && cache.has(repo) && cache.get(repo).date === today) {
+  // 根据配置的缓存时间来检查
+  const chacheTime = ms("1h");
+  const today = dayjs().format("YYYY-MM-DD HH:mm:ss");
+  const isCacheValid = (repo) => {
+    return (
+      cache.has(repo) &&
+      dayjs().diff(dayjs(cache.get(repo).date), "millisecond") < chacheTime
+    );
+  };
+  if (!force && isCacheValid(repo)) {
     return cache.get(repo).data;
   }
   try {
@@ -160,7 +169,8 @@ const cli = meow(
         const releaseInfo = await getLatestRelease(repo);
         if (
           cache.has(repo) &&
-          cache.get(repo).data.version !== releaseInfo.version
+          cache.get(repo).data.version !== releaseInfo.version &&
+          releaseInfo.version !== "N/A"
         ) {
           newVersions.push(releaseInfo);
         }
