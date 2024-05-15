@@ -7,6 +7,8 @@ import meow from "meow";
 import inquirer from "inquirer";
 import Conf from "conf";
 import ms from "ms";
+import _ from "lodash";
+import binaryVersion from "binary-version";
 import { notice } from "./notice.js";
 
 const config = new Conf({
@@ -18,8 +20,8 @@ const cache = new Conf({ projectName: "app-version", configName: "cache" });
 
 // 创建表格实例
 const table = new Table({
-  head: ["名称", "版本", "更新日期", "距离现在"],
-  colWidths: [30, 30, 30],
+  head: ["类型", "名称", "版本", "当前版本", "更新日期", "距离现在"],
+  colWidths: [10, 30, 30, 30, 30, 10],
 });
 
 // 定义一个异步函数来获取最新版本和发布时间
@@ -36,19 +38,35 @@ async function getLatestRelease(repo, force = false) {
   if (!force && isCacheValid(repo)) {
     return cache.get(repo).data;
   }
+  const { type, content } = repo;
   try {
-    const response = await got(
-      `https://api.github.com/repos/${repo}/releases/latest`,
-      { responseType: "json" },
-    );
-    const { tag_name: version, published_at: date } = response.body;
-    const data = {
-      repo,
-      version,
-      date: dayjs(date).format("YYYY-MM-DD HH:mm:ss"),
-    };
-    cache.set(repo, { date: today, data });
-    return data;
+    switch (type) {
+      case "Github":
+        const response = await got(
+          `https://api.github.com/repos/${content}/releases/latest`,
+          { responseType: "json" },
+        );
+        const { tag_name: version, published_at: date } = response.body;
+        const data = {
+          repo,
+          version,
+          date: dayjs(date).format("YYYY-MM-DD HH:mm:ss"),
+        };
+        cache.set(repo, { date: today, data });
+        return data;
+      case "Brew":
+        const {
+          versions: { stable: brewVersion },
+        } = await got(`https://formulae.brew.sh/api/formula/${content}.json`, {
+          responseType: "json",
+        }).json();
+
+        const brewData = { repo, version: brewVersion, date: "N/A" };
+        cache.set(repo, { date: today, data: brewData });
+        return brewData;
+      default:
+        throw new Error(`未知的仓库类型: ${type} ${content})`);
+    }
   } catch (error) {
     console.error(`获取 ${repo} 仓库信息失败:`, error.message);
     return { repo, version: "N/A", date: "N/A" };
@@ -60,11 +78,16 @@ async function displayRepos(force = false) {
   const repos = config.get("repos");
   for (const repo of repos) {
     const releaseInfo = await getLatestRelease(repo, force);
+    const currentRelease = await binaryVersion(repo.content).catch(() => "N/A");
     table.push([
+      repo.type,
       repo,
       releaseInfo.version,
+      currentRelease,
       releaseInfo.date,
-      ms(dayjs().diff(dayjs(releaseInfo.date), "millisecond")),
+      releaseInfo.date !== "N/A"
+        ? ms(dayjs().diff(dayjs(releaseInfo.date), "millisecond"))
+        : "N/A",
     ]);
     // 按照更新日期排序
     table.sort((a, b) => {
@@ -112,25 +135,37 @@ const cli = meow(
     case "list":
       const repos = config.get("repos");
       console.log("仓库列表:");
-      repos.forEach((repo) => console.log(repo));
+      repos.forEach((repo) => console.log(repo.content));
       break;
 
     case "add":
-      const repo = input[1];
-      if (!repo) {
-        console.log("请提供要添加的仓库 URL");
-        return;
-      }
-      const repoUrl = repo.replace("https://github.com/", "");
-      const reposToAdd = config.get("repos");
-      if (reposToAdd.includes(repoUrl)) {
-        console.log(`仓库 ${repo} 已存在`);
-        return;
-      }
+      const { type, content } = await inquirer.prompt([
+        {
+          type: "list",
+          name: "type",
+          message: "选择添加仓库的方式:",
+          choices: ["Github", "Brew"],
+        },
+        {
+          type: "input",
+          name: "content",
+          message: "请输入URL:",
+        },
+      ]);
 
-      reposToAdd.push(repoUrl);
-      config.set("repos", reposToAdd);
-      console.log(`仓库 ${repo} 已添加`);
+      let val = content;
+      switch (type) {
+        case "Github":
+          val = content.replace("https://github.com/", "");
+          break;
+      }
+      const repoList = config.get("repos");
+      const isExist = repoList.find((rep) => _.isEqual(rep, val));
+      if (isExist) {
+        console.log(`仓库 ${val} 已存在`);
+      }
+      repoList.push({ type, content: val });
+      config.set("repos", repoList);
       displayRepos(false);
       break;
 
