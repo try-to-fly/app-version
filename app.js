@@ -64,7 +64,7 @@ async function displayRepos(force = false) {
       repo,
       releaseInfo.version,
       releaseInfo.date,
-      dayjs().diff(dayjs(releaseInfo.date), "day") + "d",
+      ms(dayjs().diff(dayjs(releaseInfo.date), "millisecond")),
     ]);
     // 按照更新日期排序
     table.sort((a, b) => {
