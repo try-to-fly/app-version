@@ -91,7 +91,22 @@ async function displayRepos(force = false) {
     ]);
     // 按照更新日期排序
     table.sort((a, b) => {
-      return dayjs(b[4]).unix() - dayjs(a[4]).unix();
+      const dateA = dayjs(a[4]).unix();
+      const dateB = dayjs(b[4]).unix();
+
+      // 检查是否为 NaN
+      const isNaNDateA = isNaN(dateA);
+      const isNaNDateB = isNaN(dateB);
+
+      if (isNaNDateA && isNaNDateB) {
+        return 0; // 两个都是 NaN，位置不变
+      } else if (isNaNDateA) {
+        return 1; // a 是 NaN，排到后面
+      } else if (isNaNDateB) {
+        return -1; // b 是 NaN，排到后面
+      } else {
+        return dateB - dateA; // 正常比较
+      }
     });
   }
   // console.clear();
