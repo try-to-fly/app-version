@@ -35,10 +35,10 @@ async function getLatestRelease(repo, force = false) {
       dayjs().diff(dayjs(cache.get(repo).date), "millisecond") < chacheTime
     );
   };
-  if (!force && isCacheValid(repo)) {
-    return cache.get(repo).data;
-  }
   const { type, content } = repo;
+  if (!force && isCacheValid(content)) {
+    return cache.get(content).data;
+  }
   try {
     switch (type) {
       case "Github":
@@ -52,7 +52,7 @@ async function getLatestRelease(repo, force = false) {
           version,
           date: dayjs(date).format("YYYY-MM-DD HH:mm:ss"),
         };
-        cache.set(repo, { date: today, data });
+        cache.set(content, { date: today, data });
         return data;
       case "Brew":
         const {
@@ -62,7 +62,7 @@ async function getLatestRelease(repo, force = false) {
         }).json();
 
         const brewData = { repo, version: brewVersion, date: "N/A" };
-        cache.set(repo, { date: today, data: brewData });
+        cache.set(content, { date: today, data: brewData });
         return brewData;
       default:
         throw new Error(`未知的仓库类型: ${type} ${content})`);
@@ -91,10 +91,10 @@ async function displayRepos(force = false) {
     ]);
     // 按照更新日期排序
     table.sort((a, b) => {
-      return dayjs(b[2]).unix() - dayjs(a[2]).unix();
+      return dayjs(b[4]).unix() - dayjs(a[4]).unix();
     });
   }
-  console.clear();
+  // console.clear();
   console.log(table.toString());
 }
 
