@@ -78,7 +78,9 @@ async function displayRepos(force = false) {
   const repos = config.get("repos");
   for (const repo of repos) {
     const releaseInfo = await getLatestRelease(repo, force);
-    const currentRelease = await binaryVersion(repo.content).catch(() => "N/A");
+    const currentRelease = repo.command
+      ? await binaryVersion(repo.command).catch(() => "N/A")
+      : "N/A";
     table.push([
       repo.type,
       repo,
@@ -185,7 +187,7 @@ const cli = meow(
       break;
 
     case "remove":
-      const reposToRemove = config.get("repos");
+      const reposToRemove = config.get("repos").map((repo) => repo.content);
       const removeAnswers = await inquirer.prompt([
         {
           type: "checkbox",
@@ -201,9 +203,9 @@ const cli = meow(
         },
       ]);
       if (removeAnswers.confirmRemove) {
-        const remainingRepos = reposToRemove.filter(
-          (repo) => !removeAnswers.repos.includes(repo),
-        );
+        const remainingRepos = config
+          .get("repos")
+          .filter((repo) => !removeAnswers.repos.includes(repo.content));
         config.set("repos", remainingRepos);
         console.log("选中的仓库已删除");
       } else {
