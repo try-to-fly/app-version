@@ -1,0 +1,32 @@
+name: Daily Check
+
+on:
+  schedule:
+    - cron: "0 9 * * *" # 每天9点执行（UTC时间）
+
+jobs:
+  build-and-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          ref: master # 拉取master分支
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20.12.0 # 使用Node.js 20.12.0
+
+      - name: Install pnpm
+        run: npm install -g pnpm # 安装pnpm
+
+      - name: Install dependencies
+        run: pnpm install # 使用pnpm安装依赖
+
+      - name: Build the project
+        run: pnpm build # 执行pnpm build编译代码
+
+      - name: Run the check script
+        run: node dist/app.js check # 执行node dist/app.js check
