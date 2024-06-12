@@ -33,7 +33,38 @@ const config = new Conf<{
 }>({
   projectName: "app-version",
   configName: "repos",
-  defaults: { repos: [] },
+  defaults: {
+    repos: [
+      {
+        content: "neovim/neovim",
+        type: "Github",
+        command: "nvim",
+      },
+      {
+        content: "kovidgoyal/kitty",
+        type: "Github",
+        command: "kitty",
+      },
+      {
+        content: "stevearc/oil.nvim",
+        type: "Github",
+      },
+      {
+        content: "git",
+        type: "Brew",
+        command: "git",
+      },
+      {
+        content: "pnpm/pnpm",
+        type: "Github",
+        command: "pnpm",
+      },
+      {
+        type: "Github",
+        content: "LazyVim/LazyVim",
+      },
+    ],
+  },
 });
 
 const cache = new Conf<{
