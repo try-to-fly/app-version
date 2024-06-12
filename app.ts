@@ -11,25 +11,47 @@ import _ from "lodash";
 import binaryVersion from "binary-version";
 import { notice } from "./notice.js";
 
-const config = new Conf({
+interface Repo {
+  type: string;
+  content: string;
+  command?: string;
+}
+
+interface CacheData {
+  date: string;
+  data: ReleaseInfo;
+}
+
+interface ReleaseInfo {
+  repo: Repo;
+  version: string;
+  date: string;
+}
+
+const config = new Conf<{
+  repos: Repo[];
+}>({
   projectName: "app-version",
   configName: "repos",
   defaults: { repos: [] },
 });
-const cache = new Conf({ projectName: "app-version", configName: "cache" });
 
-// 创建表格实例
+const cache = new Conf<{
+  [key: string]: CacheData;
+}>({ projectName: "app-version", configName: "cache" });
+
 const table = new Table({
   head: ["类型", "名称", "版本", "当前版本", "更新日期", "距离现在"],
   colWidths: [10, 30, 30, 30, 30, 10],
 });
 
-// 定义一个异步函数来获取最新版本和发布时间
-async function getLatestRelease(repo, force = false) {
-  // 根据配置的缓存时间来检查
+async function getLatestRelease(
+  repo: Repo,
+  force = false,
+): Promise<ReleaseInfo> {
   const chacheTime = ms("1h");
   const today = dayjs().format("YYYY-MM-DD HH:mm:ss");
-  const isCacheValid = (repo) => {
+  const isCacheValid = (repo: string) => {
     return (
       cache.has(repo) &&
       dayjs().diff(dayjs(cache.get(repo).date), "millisecond") < chacheTime
@@ -45,8 +67,11 @@ async function getLatestRelease(repo, force = false) {
         const response = await got(
           `https://api.github.com/repos/${content}/releases/latest`,
           { responseType: "json" },
-        );
-        const { tag_name: version, published_at: date } = response.body;
+        ).json<{
+          tag_name: string;
+          published_at: string;
+        }>();
+        const { tag_name: version, published_at: date } = response;
         const data = {
           repo,
           version,
@@ -59,7 +84,11 @@ async function getLatestRelease(repo, force = false) {
           versions: { stable: brewVersion },
         } = await got(`https://formulae.brew.sh/api/formula/${content}.json`, {
           responseType: "json",
-        }).json();
+        }).json<{
+          versions: {
+            stable: string;
+          };
+        }>();
 
         const brewData = { repo, version: brewVersion, date: "N/A" };
         cache.set(content, { date: today, data: brewData });
@@ -68,14 +97,13 @@ async function getLatestRelease(repo, force = false) {
         throw new Error(`未知的仓库类型: ${type} ${content})`);
     }
   } catch (error) {
-    console.error(`获取 ${repo} 仓库信息失败:`, error.message);
+    console.error(`获取 ${repo} 仓库信息失败:`, (error as Error).message);
     return { repo, version: "N/A", date: "N/A" };
   }
 }
 
-// 主函数，依次调用 API 并输出表格
 async function displayRepos(force = false) {
-  const repos = config.get("repos");
+  const repos: Repo[] = config.get("repos");
   for (const repo of repos) {
     const releaseInfo = await getLatestRelease(repo, force);
     const currentRelease = repo.command
@@ -91,31 +119,27 @@ async function displayRepos(force = false) {
         ? ms(dayjs().diff(dayjs(releaseInfo.date), "millisecond"))
         : "N/A",
     ]);
-    // 按照更新日期排序
-    table.sort((a, b) => {
+    table.sort((a: any, b: any) => {
       const dateA = dayjs(a[4]).unix();
       const dateB = dayjs(b[4]).unix();
 
-      // 检查是否为 NaN
       const isNaNDateA = isNaN(dateA);
       const isNaNDateB = isNaN(dateB);
 
       if (isNaNDateA && isNaNDateB) {
-        return 0; // 两个都是 NaN，位置不变
+        return 0;
       } else if (isNaNDateA) {
-        return 1; // a 是 NaN，排到后面
+        return 1;
       } else if (isNaNDateB) {
-        return -1; // b 是 NaN，排到后面
+        return -1;
       } else {
-        return dateB - dateA; // 正常比较
+        return dateB - dateA;
       }
     });
   }
-  // console.clear();
   console.log(table.toString());
 }
 
-// Meow CLI
 const cli = meow(
   `
     Usage
@@ -143,14 +167,13 @@ const cli = meow(
   },
 );
 
-// 命令处理
 (async () => {
   const { input, flags } = cli;
   const command = input[0];
 
   switch (command) {
     case "list":
-      const repos = config.get("repos");
+      const repos: Repo[] = config.get("repos");
       console.log("仓库列表:");
       repos.forEach((repo) => console.log(repo.content));
       break;
@@ -176,7 +199,7 @@ const cli = meow(
           val = content.replace("https://github.com/", "");
           break;
       }
-      const repoList = config.get("repos");
+      const repoList: Repo[] = config.get("repos");
       const isExist = repoList.find((rep) => _.isEqual(rep, val));
       if (isExist) {
         console.log(`仓库 ${val} 已存在`);
@@ -187,7 +210,9 @@ const cli = meow(
       break;
 
     case "remove":
-      const reposToRemove = config.get("repos").map((repo) => repo.content);
+      const reposToRemove = config
+        .get("repos")
+        .map((repo: Repo) => repo.content);
       const removeAnswers = await inquirer.prompt([
         {
           type: "checkbox",
@@ -205,7 +230,7 @@ const cli = meow(
       if (removeAnswers.confirmRemove) {
         const remainingRepos = config
           .get("repos")
-          .filter((repo) => !removeAnswers.repos.includes(repo.content));
+          .filter((repo: Repo) => !removeAnswers.repos.includes(repo.content));
         config.set("repos", remainingRepos);
         console.log("选中的仓库已删除");
       } else {
@@ -214,29 +239,24 @@ const cli = meow(
       break;
 
     case "check":
-      // 比较缓存中的版本和最新版本，然后log出新版本
-      const reposToCheck = config.get("repos");
-      const newVersions = [];
+      await displayRepos(flags.force);
+      const reposToCheck: Repo[] = config.get("repos");
+      const newVersions: ReleaseInfo[] = [];
       for (const repo of reposToCheck) {
         const releaseInfo = await getLatestRelease(repo);
-        if (
-          cache.has(repo) &&
-          cache.get(repo).data.version !== releaseInfo.version &&
-          releaseInfo.version !== "N/A"
-        ) {
+        // 获取更新时间小于24小的版本
+        const isUpdated = dayjs().diff(dayjs(releaseInfo.date), "hour") < 24;
+        if (isUpdated) {
           newVersions.push(releaseInfo);
         }
       }
-      if (newVersions.length === 0) {
-        console.log("没有新版本");
-      } else {
-        console.log("新版本:");
-        newVersions.forEach((version) => {
-          const text = `新版本发布:${version.repo}: ${version.version} `;
-          notice(text);
-        });
+      for (const newVersion of newVersions) {
+        const text = `仓库 ${newVersion.repo.content} 有新版本: ${newVersion.version},
+          ${dayjs().diff(dayjs(newVersion.date), "hour")}小时之前`;
+        notice(text);
       }
       break;
+
     case "force":
       await displayRepos(true);
       break;
