@@ -3,6 +3,7 @@ name: Daily Check
 on:
   schedule:
     - cron: "0 9 * * *" # 每天9点执行（UTC时间）
+  workflow_dispatch:
 
 jobs:
   build-and-check:
