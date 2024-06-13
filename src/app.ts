@@ -9,7 +9,7 @@ import Conf from "conf";
 import ms from "ms";
 import _ from "lodash";
 import binaryVersion from "binary-version";
-import { notice } from "./notice.js";
+import { notice } from "./utils/notice.js";
 
 interface Repo {
   type: string;
