@@ -1,137 +1,21 @@
 #!/usr/bin/env node
 
-import got from "got";
 import Table from "cli-table3";
 import dayjs from "dayjs";
 import meow from "meow";
 import inquirer from "inquirer";
-import Conf from "conf";
 import ms from "ms";
 import _ from "lodash";
 import binaryVersion from "binary-version";
-import { notice } from "./utils/notice.js";
-
-interface Repo {
-  type: string;
-  content: string;
-  command?: string;
-}
-
-interface CacheData {
-  date: string;
-  data: ReleaseInfo;
-}
-
-interface ReleaseInfo {
-  repo: Repo;
-  version: string;
-  date: string;
-}
-
-const config = new Conf<{
-  repos: Repo[];
-}>({
-  projectName: "app-version",
-  configName: "repos",
-  defaults: {
-    repos: [
-      {
-        content: "neovim/neovim",
-        type: "Github",
-        command: "nvim",
-      },
-      {
-        content: "kovidgoyal/kitty",
-        type: "Github",
-        command: "kitty",
-      },
-      {
-        content: "stevearc/oil.nvim",
-        type: "Github",
-      },
-      {
-        content: "git",
-        type: "Brew",
-        command: "git",
-      },
-      {
-        content: "pnpm/pnpm",
-        type: "Github",
-        command: "pnpm",
-      },
-      {
-        type: "Github",
-        content: "LazyVim/LazyVim",
-      },
-    ],
-  },
-});
-
-const cache = new Conf<{
-  [key: string]: CacheData;
-}>({ projectName: "app-version", configName: "cache" });
+import { notice } from "./utils/index.js";
+import { config } from "./utils/config.js";
+import { getLatestRelease } from "./versions/index.js";
+import { ReleaseInfo, Repo } from "./utils/type.js";
 
 const table = new Table({
   head: ["类型", "名称", "版本", "当前版本", "更新日期", "距离现在"],
   colWidths: [10, 30, 30, 30, 30, 10],
 });
-
-async function getLatestRelease(
-  repo: Repo,
-  force = false,
-): Promise<ReleaseInfo> {
-  const chacheTime = ms("1h");
-  const today = dayjs().format("YYYY-MM-DD HH:mm:ss");
-  const isCacheValid = (repo: string) => {
-    return (
-      cache.has(repo) &&
-      dayjs().diff(dayjs(cache.get(repo).date), "millisecond") < chacheTime
-    );
-  };
-  const { type, content } = repo;
-  if (!force && isCacheValid(content)) {
-    return cache.get(content).data;
-  }
-  try {
-    switch (type) {
-      case "Github":
-        const response = await got(
-          `https://api.github.com/repos/${content}/releases/latest`,
-          { responseType: "json" },
-        ).json<{
-          tag_name: string;
-          published_at: string;
-        }>();
-        const { tag_name: version, published_at: date } = response;
-        const data = {
-          repo,
-          version,
-          date: dayjs(date).format("YYYY-MM-DD HH:mm:ss"),
-        };
-        cache.set(content, { date: today, data });
-        return data;
-      case "Brew":
-        const {
-          versions: { stable: brewVersion },
-        } = await got(`https://formulae.brew.sh/api/formula/${content}.json`, {
-          responseType: "json",
-        }).json<{
-          versions: {
-            stable: string;
-          };
-        }>();
-
-        const brewData = { repo, version: brewVersion, date: "N/A" };
-        cache.set(content, { date: today, data: brewData });
-        return brewData;
-      default:
-        throw new Error(`未知的仓库类型: ${type} ${content})`);
-    }
-  } catch (error) {
-    console.error(`获取 ${repo} 仓库信息失败:`, (error as Error).message);
-    return { repo, version: "N/A", date: "N/A" };
-  }
-}
 
 async function displayRepos(force = false) {
   const repos: Repo[] = config.get("repos");
