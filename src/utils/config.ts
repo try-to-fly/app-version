@@ -36,6 +36,11 @@ export const config = new Conf<{
         type: "Github",
         content: "LazyVim/LazyVim",
       },
+      {
+        type: "Github",
+        content: "nodejs/node",
+        command: "node",
+      }
     ],
   },
 });
