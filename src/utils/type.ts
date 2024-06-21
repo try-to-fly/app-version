@@ -7,5 +7,5 @@ export interface Repo {
 export interface ReleaseInfo {
   repo: Repo;
   version: string;
-  date: string;
+  date?: string;
 }

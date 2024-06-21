@@ -14,6 +14,7 @@
   "type": "module",
   "license": "ISC",
   "dependencies": {
+    "@octokit/rest": "^21.0.0",
     "binary-version": "^7.1.0",
     "cli-table3": "^0.6.5",
     "conf": "^12.0.0",
