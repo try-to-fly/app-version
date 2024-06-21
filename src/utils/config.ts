@@ -40,7 +40,27 @@ export const config = new Conf<{
         type: "Github",
         content: "nodejs/node",
         command: "node",
-      }
+      },
+      {
+        type: "Github",
+        content: "facebook/react",
+      },
+      {
+        type: "Github",
+        content: "vercel/next.js",
+      },
+      {
+        type: "Github",
+        content: "electron/electron",
+      },
+      {
+        type: "Github",
+        content: "puppeteer/puppeteer",
+      },
+      {
+        type: "Github",
+        content: "microsoft/TypeScript",
+      },
     ],
   },
 });
