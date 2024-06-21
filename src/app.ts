@@ -165,11 +165,11 @@ const cli = meow(
           newVersions.push(releaseInfo);
         }
       }
-      for (const newVersion of newVersions) {
-        const text = `仓库 ${newVersion.repo.content} 有新版本: ${newVersion.version},
-          ${dayjs().diff(dayjs(newVersion.date), "hour")}小时之前`;
-        notice(text);
+      if (newVersions.length === 0) {
+        console.log("没有新版本");
+        return;
       }
+      await notice(newVersions);
       break;
 
     case "force":
