@@ -30,4 +30,7 @@ jobs:
         run: pnpm build # 执行pnpm build编译代码
 
       - name: Run the check script
+        env:
+          APP_GITHUB_TOKEN: ${{ secrets.APP_GITHUB_TOKEN }}
+          PUSH_KEY: ${{ secrets.PUSH_KEY }}
         run: node dist/app.js check # 执行node dist/app.js check
