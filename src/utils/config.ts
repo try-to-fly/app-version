@@ -61,6 +61,10 @@ export const config = new Conf<{
         type: "Github",
         content: "microsoft/TypeScript",
       },
+      {
+        type: "Github",
+        content: "teslamate-org/teslamate",
+      },
     ],
   },
 });
