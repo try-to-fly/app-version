@@ -69,6 +69,8 @@ export const config = new Conf<{
   },
 });
 
+config.clear();
+
 export const cache = new Conf<{
   [key: string]: ReleaseInfo;
 }>({ projectName: "app-version", configName: "cache" });
