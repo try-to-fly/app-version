@@ -31,11 +31,14 @@ jobs:
       - name: Build project
         run: pnpm build
 
+      - name: List dist files
+        run: ls -la dist
+
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.APP_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
@@ -43,9 +46,11 @@ jobs:
           prerelease: false
 
       - name: Upload Release Assets
-        uses: svenstaro/upload-release-action@v2
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          repo_token: ${{ secrets.APP_GITHUB_TOKEN }}
-          file: dist/*
-          asset_name: ${{ github.ref }}
-          tag: ${{ github.ref }}
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist
+          asset_name: dist
+          asset_content_type: application/zip
