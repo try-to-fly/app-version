@@ -6,6 +6,7 @@ import meow from "meow";
 import inquirer from "inquirer";
 import ms from "ms";
 import _ from "lodash";
+import pMap from "p-map";
 import binaryVersion from "binary-version";
 import { notice } from "./utils/index.js";
 import { config } from "./utils/config.js";
@@ -19,39 +20,47 @@ const table = new Table({
 
 async function displayRepos(force = false) {
   const repos: Repo[] = config.get("repos");
-  for (const repo of repos) {
+
+  const mapper = async (repo: Repo) => {
     const releaseInfo = await getLatestRelease(repo, force);
     const currentRelease = repo.command
       ? await binaryVersion(repo.command).catch(() => "N/A")
       : "N/A";
+    const diffTime =
+      releaseInfo.date !== "N/A"
+        ? ms(dayjs().diff(dayjs(releaseInfo.date), "millisecond"))
+        : "N/A";
+
     table.push([
       repo.type,
       repo,
       releaseInfo.version,
       currentRelease,
       releaseInfo.date,
-      releaseInfo.date !== "N/A"
-        ? ms(dayjs().diff(dayjs(releaseInfo.date), "millisecond"))
-        : "N/A",
+      diffTime,
     ]);
-    table.sort((a: any, b: any) => {
-      const dateA = dayjs(a[4]).unix();
-      const dateB = dayjs(b[4]).unix();
+  };
 
-      const isNaNDateA = isNaN(dateA);
-      const isNaNDateB = isNaN(dateB);
+  await pMap(repos, mapper, { concurrency: 8 });
 
-      if (isNaNDateA && isNaNDateB) {
-        return 0;
-      } else if (isNaNDateA) {
-        return 1;
-      } else if (isNaNDateB) {
-        return -1;
-      } else {
-        return dateB - dateA;
-      }
-    });
-  }
+  table.sort((a: any, b: any) => {
+    const dateA = dayjs(a[4]).unix();
+    const dateB = dayjs(b[4]).unix();
+
+    const isNaNDateA = isNaN(dateA);
+    const isNaNDateB = isNaN(dateB);
+
+    if (isNaNDateA && isNaNDateB) {
+      return 0;
+    } else if (isNaNDateA) {
+      return 1;
+    } else if (isNaNDateB) {
+      return -1;
+    } else {
+      return dateB - dateA;
+    }
+  });
+
   console.log(table.toString());
 }
 
