@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsup src/app.ts --format cjs,esm --dts"
   },
   "bin": {
     "app-version": "./dist/app.js"
@@ -30,6 +30,7 @@
     "@types/lodash": "^4.17.5",
     "@types/ms": "^0.7.34",
     "@types/node": "^20.14.2",
+    "tsup": "^8.2.1",
     "typescript": "^5.4.5"
   }
 }
