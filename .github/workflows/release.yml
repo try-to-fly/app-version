@@ -40,16 +40,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.APP_GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
+          release_name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
+
+      - name: Install GitHub CLI
+        run: sudo apt-get install gh
 
       - name: Upload Release Assets
         run: |
           for file in $(find dist -type f); do
             echo "Uploading $file..."
-            gh release upload ${{ github.ref }} "$file" --clobber
+            gh release upload ${{ github.ref_name }} "$file" --clobber
           done
         env:
           GITHUB_TOKEN: ${{ secrets.APP_GITHUB_TOKEN }}
