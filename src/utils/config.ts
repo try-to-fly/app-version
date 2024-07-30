@@ -65,6 +65,10 @@ export const config = new Conf<{
         type: "Github",
         content: "teslamate-org/teslamate",
       },
+      {
+        type: "Github",
+        content: "jetify-com/devbox",
+      },
     ],
   },
 });
