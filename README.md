@@ -17,3 +17,7 @@ pnpm install
 ```shell
 pnpm link -g
 ```
+
+### 更新日期
+
+10月9日
