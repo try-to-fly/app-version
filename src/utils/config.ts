@@ -51,14 +51,6 @@ export const config = new Conf<{
       },
       {
         type: "Github",
-        content: "electron/electron",
-      },
-      {
-        type: "Github",
-        content: "puppeteer/puppeteer",
-      },
-      {
-        type: "Github",
         content: "microsoft/TypeScript",
       },
       {
