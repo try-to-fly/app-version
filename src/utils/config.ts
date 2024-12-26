@@ -65,6 +65,10 @@ export const config = new Conf<{
         type: "Github",
         content: "tmux/tmux",
       },
+      {
+        type: "Github",
+        content: "triggerdotdev/trigger.dev",
+      },
     ],
   },
 });
