@@ -59,10 +59,6 @@ export const config = new Conf<{
       },
       {
         type: "Github",
-        content: "jetify-com/devbox",
-      },
-      {
-        type: "Github",
         content: "tmux/tmux",
       },
       {
