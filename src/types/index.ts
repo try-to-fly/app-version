@@ -53,4 +53,4 @@ export interface DiffResult {
 }
 
 // 输出格式
-export type OutputFormat = "table" | "json";
+export type OutputFormat = "table" | "json" | "markdown";

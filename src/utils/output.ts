@@ -1,10 +1,39 @@
 import Table from "cli-table3";
 import type { ReleaseInfo, DiffResult, Repo, OutputFormat } from "../types/index.js";
 
+function repoUrl(repo: Repo): string | null {
+  if (repo.type === "github") {
+    return `https://github.com/${repo.content}`;
+  }
+  if (repo.type === "brew") {
+    // Homebrew formula/cask pages vary; keep null for now.
+    return null;
+  }
+  return null;
+}
+
+function githubReleasesUrl(repo: Repo): string | null {
+  if (repo.type !== "github") return null;
+  return `https://github.com/${repo.content}/releases`;
+}
+
 // 输出仓库列表
 export function outputRepoList(repos: Repo[], format: OutputFormat): void {
   if (format === "json") {
     console.log(JSON.stringify(repos, null, 2));
+    return;
+  }
+
+  if (format === "markdown") {
+    // Minimal, readable list
+    repos.forEach((repo) => {
+      const url = repoUrl(repo);
+      if (url) {
+        console.log(`- [${repo.content}](${url})`);
+      } else {
+        console.log(`- ${repo.content}`);
+      }
+    });
     return;
   }
 
@@ -30,6 +59,21 @@ export function outputVersionList(releases: ReleaseInfo[], format: OutputFormat)
       date: r.date,
     }));
     console.log(JSON.stringify(data, null, 2));
+    return;
+  }
+
+  if (format === "markdown") {
+    if (releases.length === 0) {
+      console.log("(empty)");
+      return;
+    }
+    console.log("*📦 当前追踪版本*");
+    console.log("");
+    releases.forEach((r) => {
+      const url = githubReleasesUrl(r.repo);
+      const name = url ? `[${r.repo.content}](${url})` : r.repo.content;
+      console.log(`- ${name} \`${r.version}\` (${r.date})`);
+    });
     return;
   }
 
@@ -61,7 +105,26 @@ export function outputDiffList(diffs: DiffResult[], format: OutputFormat): void 
   }
 
   if (diffs.length === 0) {
-    console.log("没有版本变化");
+    if (format === "markdown") {
+      // Silence-friendly output (cron can choose to ignore empty output)
+      console.log("(no changes)");
+    } else {
+      console.log("没有版本变化");
+    }
+    return;
+  }
+
+  if (format === "markdown") {
+    console.log("*📦 发现软件更新*");
+    console.log("");
+    diffs.forEach((d) => {
+      const url = githubReleasesUrl(d.repo);
+      const name = url ? `[${d.repo.content}](${url})` : d.repo.content;
+      const date = (d.newDate || "").split(" ")[0];
+      console.log(`- ${name} \`${d.oldVersion} -> ${d.newVersion}\` (${date})`);
+    });
+    console.log("");
+    console.log("_详情：运行_ `app-version check`");
     return;
   }
 

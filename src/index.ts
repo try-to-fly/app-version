@@ -20,7 +20,8 @@ program
   .name("app-version")
   .description("软件版本追踪工具")
   .version("0.1.0")
-  .option("--json", "JSON 格式输出");
+  .option("--json", "JSON 格式输出")
+  .option("--markdown", "Markdown 格式输出（适合 Telegram/Markdown 渠道）");
 
 // check 命令（默认）
 program
@@ -29,7 +30,8 @@ program
   .option("-f, --force", "强制刷新缓存", false)
   .option("-c, --concurrency <num>", "并发数量", "8")
   .action(async (options) => {
-    const format: OutputFormat = program.opts().json ? "json" : "table";
+    const opts = program.opts();
+    const format: OutputFormat = opts.json ? "json" : opts.markdown ? "markdown" : "table";
     await checkCommand({
       force: options.force,
       concurrency: parseInt(options.concurrency, 10),
@@ -42,7 +44,8 @@ program
   .command("list")
   .description("查看仓库列表")
   .action(() => {
-    const format: OutputFormat = program.opts().json ? "json" : "table";
+    const opts = program.opts();
+    const format: OutputFormat = opts.json ? "json" : opts.markdown ? "markdown" : "table";
     listCommand(format);
   });
 
@@ -67,7 +70,8 @@ program
   .command("diff")
   .description("比对版本变化")
   .action(async () => {
-    const format: OutputFormat = program.opts().json ? "json" : "table";
+    const opts = program.opts();
+    const format: OutputFormat = opts.json ? "json" : opts.markdown ? "markdown" : "table";
     await diffCommand({ format });
   });
 
