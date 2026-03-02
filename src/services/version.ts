@@ -8,7 +8,8 @@ import { getCache, isCacheValid, setCache } from "../store/cache.js";
 // 获取单个仓库的最新版本
 export async function getLatestVersion(
   repo: Repo,
-  force = false
+  force = false,
+  writeCache = true
 ): Promise<ReleaseInfo> {
   const { type, content } = repo;
 
@@ -54,8 +55,10 @@ export async function getLatestVersion(
         throw new Error(`未知的仓库类型: ${type}`);
     }
 
-    // 更新缓存
-    setCache(content, version, date);
+    // 更新缓存（可禁用：用于 diff 这类“只比较不落盘”的场景）
+    if (writeCache) {
+      setCache(content, version, date);
+    }
 
     return { repo, version, date };
   } catch (error) {
@@ -68,11 +71,12 @@ export async function getLatestVersion(
 export async function getLatestVersions(
   repos: Repo[],
   force = false,
-  concurrency = 8
+  concurrency = 8,
+  writeCache = true
 ): Promise<ReleaseInfo[]> {
   const results = await pMap(
     repos,
-    (repo) => getLatestVersion(repo, force),
+    (repo) => getLatestVersion(repo, force, writeCache),
     { concurrency }
   );
 

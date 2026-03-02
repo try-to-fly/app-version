@@ -106,12 +106,13 @@ export function outputDiffList(diffs: DiffResult[], format: OutputFormat): void 
 
   if (diffs.length === 0) {
     if (format === "markdown") {
-      // Silence-friendly output (cron can choose to ignore empty output)
-      console.log("(no changes)");
+      // IMPORTANT: for automation (cron/heartbeat), emit nothing when there are no changes.
+      // This avoids spamming channels with "(no changes)".
+      return;
     } else {
       console.log("没有版本变化");
+      return;
     }
-    return;
   }
 
   if (format === "markdown") {
