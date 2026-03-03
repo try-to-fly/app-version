@@ -3,3 +3,4 @@ export { addCommand } from "./add.js";
 export { removeCommand } from "./remove.js";
 export { checkCommand } from "./check.js";
 export { diffCommand } from "./diff.js";
+export { diffPushCommand } from "./diff-push.js";

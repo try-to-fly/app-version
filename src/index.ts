@@ -8,6 +8,7 @@ import {
   removeCommand,
   checkCommand,
   diffCommand,
+  diffPushCommand,
 } from "./commands/index.js";
 import type { OutputFormat } from "./types/index.js";
 
@@ -73,6 +74,24 @@ program
     const opts = program.opts();
     const format: OutputFormat = opts.json ? "json" : opts.markdown ? "markdown" : "table";
     await diffCommand({ format });
+  });
+
+// diff-push: compute diffs, push via openclaw message, then update baseline ONLY on success.
+program
+  .command("diff-push")
+  .description("比对版本变化并推送（仅发送成功后才更新基线）")
+  .requiredOption("--channel <channel>", "OpenClaw message channel (e.g. discord)")
+  .requiredOption("--target <target>", "OpenClaw message target (e.g. channel:123)")
+  .option("--title <title>", "Message title prefix")
+  .action(async (options) => {
+    const opts = program.opts();
+    const format: OutputFormat = opts.json ? "json" : opts.markdown ? "markdown" : "table";
+    await diffPushCommand({
+      format,
+      channel: options.channel,
+      target: options.target,
+      title: options.title,
+    });
   });
 
 program.parse();
