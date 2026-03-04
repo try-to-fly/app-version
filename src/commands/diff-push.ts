@@ -46,6 +46,23 @@ export async function diffPushCommand(options: DiffPushOptions): Promise<void> {
     const snapshot = getSnapshot(key);
 
     const hadSnapshot = Boolean(snapshot);
+
+    // If upstream is unavailable (version/date is N/A), do not treat it as an update.
+    // Skip alerting and NEVER update baseline in this case.
+    if (release.version === "N/A" || release.date === "N/A") {
+      await appendRunHistory({
+        cmd: "diff-push",
+        ok: true,
+        reason: "upstream_unavailable",
+        repo: key,
+        snapshotVersion: snapshot?.version,
+        snapshotAt: snapshot?.recordedAt,
+        releaseVersion: release.version,
+        releaseAt: release.date,
+      });
+      continue;
+    }
+
     const changed = hadSnapshot ? snapshot!.version !== release.version : false;
 
     const oldAtMs = hadSnapshot ? parseLocalTsToMs(snapshot!.recordedAt) : NaN;
