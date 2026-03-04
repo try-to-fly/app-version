@@ -1,5 +1,6 @@
 import { getRepos } from "../store/config.js";
 import { getLatestVersions } from "../services/version.js";
+import { getLatestVersionsSafe } from "../services/version-safe.js";
 import {
   appendRunHistory,
   getSnapshot,
@@ -36,7 +37,33 @@ export async function diffPushCommand(options: DiffPushOptions): Promise<void> {
     return;
   }
 
-  const releases = await getLatestVersions(repos, true, 8, false);
+  const releaseResults = await getLatestVersionsSafe(repos, true, 8, false);
+
+  const releases = releaseResults.filter((r) => r.ok).map((r) => r.release);
+  const failures = releaseResults.filter((r) => !r.ok);
+
+  // Log failures (but do not fail the whole run; we allow partial outages).
+  for (const f of failures) {
+    await appendRunHistory({
+      cmd: "diff-push",
+      ok: false,
+      reason: "repo_fetch_failed",
+      repo: f.repo.content,
+      type: f.repo.type,
+      error: f.error,
+    });
+  }
+
+  if (releases.length === 0) {
+    await appendRunHistory({
+      cmd: "diff-push",
+      ok: false,
+      reason: "all_failed",
+      repoCount: repos.length,
+      durationMs: Date.now() - startedAt,
+    });
+    return;
+  }
 
   const diffs: DiffResult[] = [];
   const toUpdateBaseline: { key: string; version: string; hadSnapshot: boolean; changed: boolean }[] = [];
@@ -46,22 +73,6 @@ export async function diffPushCommand(options: DiffPushOptions): Promise<void> {
     const snapshot = getSnapshot(key);
 
     const hadSnapshot = Boolean(snapshot);
-
-    // If upstream is unavailable (version/date is N/A), do not treat it as an update.
-    // Skip alerting and NEVER update baseline in this case.
-    if (release.version === "N/A" || release.date === "N/A") {
-      await appendRunHistory({
-        cmd: "diff-push",
-        ok: true,
-        reason: "upstream_unavailable",
-        repo: key,
-        snapshotVersion: snapshot?.version,
-        snapshotAt: snapshot?.recordedAt,
-        releaseVersion: release.version,
-        releaseAt: release.date,
-      });
-      continue;
-    }
 
     const changed = hadSnapshot ? snapshot!.version !== release.version : false;
 

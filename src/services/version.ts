@@ -62,8 +62,11 @@ export async function getLatestVersion(
 
     return { repo, version, date };
   } catch (error) {
-    console.error(`获取 ${content} 版本失败:`, (error as Error).message);
-    return { repo, version: "N/A", date: "N/A" };
+    // Do NOT silently convert failures into "N/A". Callers (diff-push) must decide how to handle
+    // partial outages, otherwise we risk false alerts (e.g. version -> N/A) and baseline corruption.
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error(`获取 ${content} 版本失败:`, msg);
+    throw new Error(msg || `获取 ${content} 版本失败`);
   }
 }
 
